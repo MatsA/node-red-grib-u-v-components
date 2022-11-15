@@ -1,0 +1,576 @@
+[
+    {
+        "id": "dac32bf817c8ede1",
+        "type": "tab",
+        "label": "GRIB, CPH",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "3063e4e651860efe",
+        "type": "split",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "splt": "\\n",
+        "spltType": "str",
+        "arraySplt": 1,
+        "arraySpltType": "len",
+        "stream": false,
+        "addname": "",
+        "x": 750,
+        "y": 120,
+        "wires": [
+            [
+                "31a8d583f1490dbe"
+            ]
+        ]
+    },
+    {
+        "id": "78150f1ecf60f856",
+        "type": "exec",
+        "z": "dac32bf817c8ede1",
+        "command": "grib_ls cph.grib -l 56.12,12.60,1 -w shortName=10u/10v -p shortName,count,dataDate,validityDate,validityTime",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "grib_ls => select data from dowloaded file",
+        "x": 860,
+        "y": 180,
+        "wires": [
+            [
+                "3063e4e651860efe"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "31a8d583f1490dbe",
+        "type": "function",
+        "z": "dac32bf817c8ede1",
+        "name": "Extract wind 10u and 10v",
+        "func": "// Example input\n//           1         2         3         4         5         6         7         8\n// 012345678901234567890123456789012345678901234567890123456789012345678901234567890\n// shortName     count         dataDate      validityDate  validityTime   value \n// 10u           539           20221025      20221025      1200          6.3297\n// 10u           540           20221025      20221025      1300          5.38476\n//\n// Output to file => validityDate;validityTime;wind m/s;wind direction degrees\n\nlet inputLine = msg.payload\nconst date = new Date\n\nlet uWind = {}\nlet vWind = {}\n\nlet shortName = inputLine.substring(0,4);\n\nif ((shortName == \"10u \") || (shortName == \"10v \")) {\n\n    let string = inputLine.substring(65, 80);               // Get wind or wind direction\n    let value = parseFloat(string)\n                                                            // dwi => Create string for outfile\n        let validityDate = parseInt(inputLine.substring(40, 50));\n\n        string = inputLine.substring(52, 62);               // Get validityTime\n        string = parseInt(string).toString().padStart(4, \"0\")   // Pad beginning with \"0\" so string is 4 long\n        let validityTime = string.substring(0, 2) + \":\" + string.substring(2, 4) // Insert \":\" in the time field\n\n    let outPut = shortName + \";\" + validityDate + \";\" + validityTime + \";\" + value\n    \n    if (shortName == \"10u \") {\n        uWind.payload = outPut\n    }\n    else {\n        vWind.payload = outPut\n    }\n    return [uWind, vWind]\n}\nelse {\n    \n    return null\n}",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 40,
+        "wires": [
+            [
+                "07efecf7ddcdbffe"
+            ],
+            [
+                "07e68e708c634e3d"
+            ]
+        ]
+    },
+    {
+        "id": "07e68e708c634e3d",
+        "type": "file",
+        "z": "dac32bf817c8ede1",
+        "name": "Output to file => cph_v.txt",
+        "filename": "cph_v.txt",
+        "filenameType": "str",
+        "appendNewline": true,
+        "createDir": false,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 810,
+        "y": 60,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "07efecf7ddcdbffe",
+        "type": "file",
+        "z": "dac32bf817c8ede1",
+        "name": "Output to file => cph_u.txt",
+        "filename": "cph_u.txt",
+        "filenameType": "str",
+        "appendNewline": true,
+        "createDir": false,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 820,
+        "y": 20,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "d4a5358f698dda83",
+        "type": "exec",
+        "z": "dac32bf817c8ede1",
+        "command": "rm cph_*",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "",
+        "x": 560,
+        "y": 180,
+        "wires": [
+            [
+                "78150f1ecf60f856"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "a8fbee4b8d0e3f5b",
+        "type": "file in",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "filename": "cph_u.txt",
+        "filenameType": "str",
+        "format": "lines",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 380,
+        "y": 240,
+        "wires": [
+            [
+                "c1a9e2baa79f3b6a"
+            ]
+        ]
+    },
+    {
+        "id": "c1a9e2baa79f3b6a",
+        "type": "csv",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "sep": ";",
+        "hdrin": "",
+        "hdrout": "none",
+        "multi": "mult",
+        "ret": "\\n",
+        "temp": "shortName,validityDate,validityTime,value",
+        "skip": "0",
+        "strings": false,
+        "include_empty_strings": "",
+        "include_null_values": "",
+        "x": 550,
+        "y": 240,
+        "wires": [
+            [
+                "61f21c9c047c378c"
+            ]
+        ]
+    },
+    {
+        "id": "3096438a3077a07e",
+        "type": "inject",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 400,
+        "wires": [
+            [
+                "a8fbee4b8d0e3f5b",
+                "3436723bef2d1907",
+                "779aaee38a1739bd",
+                "c036c3a677bb9592"
+            ]
+        ]
+    },
+    {
+        "id": "61f21c9c047c378c",
+        "type": "change",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "cph_u",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 780,
+        "y": 240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3436723bef2d1907",
+        "type": "file in",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "filename": "cph_v.txt",
+        "filenameType": "str",
+        "format": "lines",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 380,
+        "y": 280,
+        "wires": [
+            [
+                "80c9ed6d5ea409a0"
+            ]
+        ]
+    },
+    {
+        "id": "80c9ed6d5ea409a0",
+        "type": "csv",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "sep": ";",
+        "hdrin": "",
+        "hdrout": "none",
+        "multi": "mult",
+        "ret": "\\n",
+        "temp": "shortName,validityDate,validityTime,value",
+        "skip": "0",
+        "strings": false,
+        "include_empty_strings": "",
+        "include_null_values": "",
+        "x": 550,
+        "y": 280,
+        "wires": [
+            [
+                "bc40603764801158"
+            ]
+        ]
+    },
+    {
+        "id": "bc40603764801158",
+        "type": "change",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "cph_v",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 780,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c6ac70280447be37",
+        "type": "function",
+        "z": "dac32bf817c8ede1",
+        "name": "create wget command to get grib file",
+        "func": "// Create the command retrieve the grib file\n// wget -O cph.grib https://openskiron.org/gribs_icon-d2/Copenhagen_ICON-D2_EWAM_20221025-12.grb2\n\nlet date = new Date().toLocaleDateString('sv');\nlet time = msg.payload;      //\n\n// msg.payload = \"wget -O cph.grib https://openskiron.org/gribs_icon-d2/Copenhagen_ICON-D2_EWAM_\" + date.replace(/-/g, \"\") + \"-00.grb2\" \n\nmsg.payload = \"wget -O cph.grib https://openskiron.org/gribs_icon-d2/Copenhagen_ICON-D2_EWAM_\" + date.replace(/-/g, \"\") + time + \".grb2\" \n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 120,
+        "wires": [
+            [
+                "65326439a62ccc3e"
+            ]
+        ]
+    },
+    {
+        "id": "65326439a62ccc3e",
+        "type": "exec",
+        "z": "dac32bf817c8ede1",
+        "command": "",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "",
+        "x": 370,
+        "y": 180,
+        "wires": [
+            [
+                "d4a5358f698dda83"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "74cac9af0b7a8615",
+        "type": "inject",
+        "z": "dac32bf817c8ede1",
+        "name": "06:00 every day",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "00 06 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-00",
+        "payloadType": "str",
+        "x": 130,
+        "y": 120,
+        "wires": [
+            [
+                "c6ac70280447be37",
+                "ed0b9675baa01d32"
+            ]
+        ]
+    },
+    {
+        "id": "779aaee38a1739bd",
+        "type": "delay",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 380,
+        "y": 400,
+        "wires": [
+            [
+                "7ebcf2df8238dde2"
+            ]
+        ]
+    },
+    {
+        "id": "7ebcf2df8238dde2",
+        "type": "function",
+        "z": "dac32bf817c8ede1",
+        "name": "Calculate win speed/direction",
+        "func": "let cph_u = flow.get(\"cph_u\");\nlet cph_v = flow.get(\"cph_v\");\n\nlet wind = {}\nlet direction = {}\n\nfor (let i = 0; i < cph_u.length; i++) {\n\n    // WindDir, ϕ=mod(180+180/pi * πatan2(v,u),360)\n    let windDir = (180 + (180 / Math.PI) * (Math.atan2(cph_u[i].value, cph_v[i].value))) % 360;\n    \n    //  WindSpeed ws = sqrt(u2+v2)\n    let windSpeed = Math.sqrt(Math.pow(cph_u[i].value, 2) + Math.pow(cph_v[i].value, 2))\n\n    let year = parseInt(cph_u[i].validityDate.substring(0, 4))\n    let month = parseInt(cph_u[i].validityDate.substring(4, 6)) - 1 // January is 0\n    let day = parseInt(cph_u[i].validityDate.substring(6))\n    let hour = parseInt(cph_u[i].validityTime.substring(0, 2))\n    let minute = parseInt(cph_u[i].validityTime.substring(3))\n\n    let dateStr = new Date(year, month, day, hour, minute);\n    const dateIso = dateStr.toISOString();\n\n    wind.payload = windSpeed;\n    wind.topic = \"Wind speed m/s\"\n    wind.timestamp = dateIso\n\n    direction.payload = windDir;\n    direction.topic = \"Wind direction degrees\"\n    direction.timestamp = dateIso\n\n    node.send([wind, direction]);\n}\n\nreturn null;",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 450,
+        "y": 360,
+        "wires": [
+            [
+                "9a13d79351ffeea1"
+            ],
+            [
+                "bc65d14ab2012a1d"
+            ]
+        ]
+    },
+    {
+        "id": "9a13d79351ffeea1",
+        "type": "ui_chart",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "group": "1812d66064c5b074",
+        "order": 5,
+        "width": 9,
+        "height": 6,
+        "label": "Wind speed, OpenSciron",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "dd HH:mm",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": "5",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "86400",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "x": 810,
+        "y": 320,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "bc65d14ab2012a1d",
+        "type": "ui_chart",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "group": "1812d66064c5b074",
+        "order": 6,
+        "width": 9,
+        "height": 6,
+        "label": "Wind direction, OpenSkiron",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "dd HH:mm",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": "5",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "86400",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "x": 820,
+        "y": 360,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ed0b9675baa01d32",
+        "type": "delay",
+        "z": "dac32bf817c8ede1",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "3",
+        "timeoutUnits": "minutes",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 120,
+        "y": 240,
+        "wires": [
+            [
+                "a8fbee4b8d0e3f5b",
+                "3436723bef2d1907",
+                "779aaee38a1739bd",
+                "c036c3a677bb9592"
+            ]
+        ]
+    },
+    {
+        "id": "c036c3a677bb9592",
+        "type": "change",
+        "z": "dac32bf817c8ede1",
+        "name": "Clear chart",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "[]",
+                "tot": "json"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 390,
+        "y": 320,
+        "wires": [
+            [
+                "9a13d79351ffeea1",
+                "bc65d14ab2012a1d"
+            ]
+        ]
+    },
+    {
+        "id": "1812d66064c5b074",
+        "type": "ui_group",
+        "name": "Column 1",
+        "tab": "f2d6d5124263565c",
+        "order": 1,
+        "disp": false,
+        "width": "18",
+        "collapse": false
+    },
+    {
+        "id": "f2d6d5124263565c",
+        "type": "ui_tab",
+        "name": "Wind forecast",
+        "icon": "dashboard",
+        "order": 6,
+        "disabled": false,
+        "hidden": false
+    }
+]
